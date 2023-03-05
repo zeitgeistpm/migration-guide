@@ -1,22 +1,23 @@
 # Migrating to another relaychain - A complete guide
 
-Author: M.Sc. Harald Heckmann (also known as [sea212](https://github.com/sea212))
-Mail: harald@zeitgeist.pm, mail@haraldheckmann.de
-Date: Mar 5, 2023
+Author: [M.Sc. Harald Heckmann](https://github.com/sea212) (also known as [sea212](https://github.com/sea212))  
+Mail: harald@zeitgeist.pm, mail@haraldheckmann.de  
+Date: Mar 5, 2023  
 Revision: 17
 
-Reviewers: B.Sc. Christopher Altmann (chris@zeitgeist.pm), [Dr. Malte Kliemann](https://github.com/maltekliemann) (malte@zeitgeist.pm)
+Reviewers: [B.Sc. Christopher Altmann](https://github.com/Chralt98) (chris@zeitgeist.pm), [Dr. Malte Kliemann](https://github.com/maltekliemann) (malte@zeitgeist.pm)
 
 KILT has already proven in October 2022 that an almost [seemless migration of a parachain from Kusama to Polkadot](https://polkadot.network/blog/first-parachain-successfully-migrates-from-kusama-to-polkadot) (and any other Polkadot-like runtime) is possible.
 
 > On October 3rd, KILT Protocol made history by becoming the first parachain to accomplish a full migration from the Kusama relaychain to the Polkadot Relay Chain.
 
-KILT also provided some hints in regards to the process from a [technical perspective](https://medium.com/kilt-protocol/kilt-migration-to-polkadot-technical-overview-ebc8c1700750). Unfortunately there is no complete and precise documentation of the conceptual overview, the technical process in detail and the pitfalls associated to it. In this document, all of those elements are elaborated on and means to verify that the process succeeds in a close-to-production simulation before actually applying the migration on a production network are supplied. As Zeitgeist prepares to migrate from Kusama to Polkadot, this seems like the right time to document all of those steps for parachains that want to migrate in the future.
+KILT also provided some hints in regards to the process from a [technical perspective](https://medium.com/kilt-protocol/kilt-migration-to-polkadot-technical-overview-ebc8c1700750). Unfortunately there is no complete and precise documentation of the conceptual overview, the technical process in detail and the pitfalls associated to it. In this document, all of those elements are elaborated on and means to verify that the process succeeds in a close-to-production simulation before actually applying the migration on a production network are supplied. In addition, solutions to ensure a recovery in case of failure are presented. As Zeitgeist prepares to migrate from Kusama to Polkadot, this seems like the right time to document all of those steps for parachains that want to migrate in the future.
 
 ## Conceptual overview of the migration process
 The starting position is that one parachain, the live parachain, would like to migrate from one relaychain to another. On the other relaychain another parachain, the shell parachain, awaits to be replaced by the live parachain:
 
 ![Starting position](https://i.imgur.com/XM8O7rJ.png)
+
 *Figure: Starting position*
 
 The migration process is split into three parts:
@@ -33,6 +34,7 @@ Ideally this chain specification file is already compiled within a new client, t
 Once the preparations from the node perspective were made, the preparation of the migration on the live parachain can be started. The preparation of the live parachain is depicted in the following figure.
 
 ![Preparing the parachain that should be migrated](https://i.imgur.com/Iw2pCZ9.png)
+
 *Figure: Preparing the parachain that should be migrated*
 
 To avoid forks and the need to blacklist blocks, it is mandatory that the live parachain is halted. This condition should enable anyone who is responsible for that process to experience an alien level of respect. The respect comes from the fact that should the migration fail and leave behind two broken parachains, the operation of the whole parachain is halted for at least two weeks, should the Fellowship (OpenGov, Gov2) or the Technical Committee (Gov1) not decide to fast track the repairing of the broken parachain. To avoid running into this situation, the manager account of the live parachain is unlocked, effectively granting the manager account all the privileges necessary to do the recovery. In rare circumstances halting the chain requires the transferral of slot swap leases. In that case a third parachain, the recovery parachain is introduced.
@@ -54,6 +56,7 @@ It is important that in either case, the halting instructions are only executed 
 To execute the migration, the current [validation code (runtime)](https://docs.substrate.io/fundamentals/runtime-development/) and the current [head](https://substrate.stackexchange.com/a/7323/49) have to be extracted from the halted live parachain (that is a parathread now). Once those are available, they can be injected into the shell parachain, as described in the following figure.
 
 ![Replace shell parachain](https://i.imgur.com/Y5LGaUx.png)
+
 *Figure: Overwriting the runtime and head in the shell parachain with solo-to-para pallet*
 
 The figure shows how the [`solo-to-para`](https://github.com/paritytech/cumulus/blob/e23a0f2dfbeda62b96c1bd88d83126e0d5770f9c/pallets/solo-to-para) pallet is utilized to apply the current [validation code (runtime)](https://docs.substrate.io/fundamentals/runtime-development/) and the current [head](https://substrate.stackexchange.com/a/7323/49) of the halted live parachain (which is a parathread by now) to the shell parachain. The shell parachain signals the relaychain that it wants to upgrade the current [validation code (runtime)](https://docs.substrate.io/fundamentals/runtime-development/) and the current [head](https://substrate.stackexchange.com/a/7323/49). Once the right time has come (which depends on the configuration of the relaychain), those upgrades are applied.
@@ -238,3 +241,18 @@ The second approach can happen manually, semi-automatic or fully automatic. Thos
 Both have their pros and cons, evaluating those is not within the scope of this section.
 
 Once the migration was successful within the simulated environment, the migration can be executed in the production environment. If a testnet parachain exists that uses a custom relaychain, it is recommened to execute the migration from the custom relaychain to Rococo first for the testnet.
+
+## Recovery
+The recovery process is case-dependent, just as the migration is.
+
+#### Case A: Different `parachain_id` or `MqcHeads`
+
+
+#### Case B: Equal `parachain_id` and `MqcHeads`
+This is the most forgiving case. Since the halting of the chain was not introduced by providing an invalid pallet configuration in the given context of a relaychain, but rather by just passing on the privilege to produce blocks, only the following steps are necessary to recover the parachain:
+1. Run the last used live parachain chainspec using a `--base-path` that points to a backup of the live chain folder.
+2. Send an XCM from the recovery parachain to the associated relaychain to unlock the manager account (see technical chapter for calldata)
+3. Only if step 2. succeeds, send an XCM from the recovery parachain to the associated relaychain to instruct swapping slot leases with the live parathread (see technical chapter for calldata)
+4. Use the manager account of the live parathread to instruct the associated relaychain to swap slot leases with the recovery parachain
+
+That should transfer the slot leases back to the live parathread from the recovery parachain, which downgrades the recovery parachain to a parathread and upgrades the live parathread back to a parachain, effectively granting it the privilege to produce blocks.
