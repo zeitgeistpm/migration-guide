@@ -2,8 +2,8 @@
 
 Author: M.Sc. Harald Heckmann (also known as [sea212](https://github.com/sea212))
 Mail: harald@zeitgeist.pm, mail@haraldheckmann.de
-Date: Mar 3, 2023
-Revision: 16
+Date: Mar 5, 2023
+Revision: 17
 
 Reviewers: B.Sc. Christopher Altmann (chris@zeitgeist.pm), [Dr. Malte Kliemann](https://github.com/maltekliemann) (malte@zeitgeist.pm)
 
@@ -222,3 +222,19 @@ The last step is to overwrite the head and runtime from the shell parachain with
 Finally, the invocation of `soloToPara.schedule_migration(code, head_data)` on the shell parachain will schedule the migration. `code` represents the latest runtime of the live parachain, while `head_data` represents the latest head data from the live parachain. Relaychains have an upgrade delay, on Polkadot it is 1 hour as of writing this document. Exactly one block before the hour has passed, the head data is overwritten and in the next block the active runtime will also be overwritten. At this point in time, all the node operators should have replaced their parachain chain data with the latest chain data from the live parachain after it halted and also have the relaychain data of the relaychain that is associated to the shell parachain ready. The new client utilitzes this data and nodes should start to synchronize blocks starting from the halted block of the live parachain in a separated network.
 
 Finally, the migration runtime can be replaced by a proper production runtime once the runtime upgrade cooldown period has passed.
+
+## Testing the migration
+It is immensely important that the migration is tested before applying it to a producting network to ensure familiarity with the process and to verify that the suggested approach is also applicable to the given context.
+
+There are multiple approaches that can be pursued to test the migration. In any case, it should be ensured that the parachain and the relaychain both are as close to production as possible. Whatever approach is selected, those steps should be included:
+
+1. Clone the state from all the (migration) parachains and relaychains that are involved in the migration.
+2. Verify the migration in a simulated environment.
+
+The second approach can happen manually, semi-automatic or fully automatic. Those tools can be utilized to achieve that:
+1. [Zombienet](https://github.com/paritytech/zombienet)
+2. [Chopsticks](https://github.com/AcalaNetwork/chopsticks)
+
+Both have their pros and cons, evaluating those is not within the scope of this section.
+
+Once the migration was successful within the simulated environment, the migration can be executed in the production environment. If a testnet parachain exists that uses a custom relaychain, it is recommened to execute the migration from the custom relaychain to Rococo first for the testnet.
