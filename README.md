@@ -3,7 +3,7 @@
 Author: [M.Sc. Harald Heckmann](https://github.com/sea212) (also known as [sea212](https://github.com/sea212))  
 Mail: harald@zeitgeist.pm, mail@haraldheckmann.de  
 Date: Mar 5, 2023  
-Revision: 17
+Revision: 18
 
 Reviewers: [B.Sc. Christopher Altmann](https://github.com/Chralt98) (chris@zeitgeist.pm), [Dr. Malte Kliemann](https://github.com/maltekliemann) (malte@zeitgeist.pm)
 
@@ -133,7 +133,7 @@ type CheckAssociatedRelayNumber = cumulus_pallet_parachain_system::AnyRelayNumbe
 - (If `MqcHeads` differ) Ensure that `system.kill_storage` is not call-filtered if the parachain received or sent XCM.
 - (If `MqcHeads` or `parachain_id` differ) ensure that `system.set_storage` is not call-filtered if the `parachain_id` differs between the live and the shell parachain.
 - (Case dependent) Consider any hooks that have an increased computational demand based on the interval between the timestamp of two blocks.
-- (Optional) Apply a call-filter to filter token transfers. This ensures that deposits to and withdrawals from centralized exchanges do fail shortly before the migration. Using `pallet-balances`, `orml-tokens` and `orml-currencies`, the call filter can look like that:
+- Apply a call-filter to filter token transfers. This ensures that deposits to and withdrawals from centralized exchanges do fail shortly before the migration. It also ensures that no value was exchanged in case reverting blocks during a recovery is necessary. Using `pallet-balances`, `orml-tokens` and `orml-currencies`, the call filter can look like that:
 
 ```rust
 #[derive(scale_info::TypeInfo)]
@@ -243,13 +243,25 @@ Both have their pros and cons, evaluating those is not within the scope of this 
 Once the migration was successful within the simulated environment, the migration can be executed in the production environment. If a testnet parachain exists that uses a custom relaychain, it is recommened to execute the migration from the custom relaychain to Rococo first for the testnet.
 
 ## Recovery
-The recovery process is case-dependent, just as the migration is.
+The recovery process is case-dependent, just as the migration process is.
 
 #### Case A: Different `parachain_id` or `MqcHeads`
-
+In this case the live parachain had to be halted by providing an invalid pallet configuration in the given context of a relaychain, the following approach has to be applied to recover the parachain.  
+It is impossible to provide a proper chain configuration after the latest block, since the block production is halted and thus no state changes can be introduced. Consequently, the chain has to be reverted back to a previous functioning state.  
+The revert should incorporate the least blocks possible while offering enough time to cancel any scheduled operations related to the migration. At the same time, the revert should not surpass the block at which the migration runtime was deployed that filteres calls to transfer any tokens, otherwise value might have already been exchanged for tokens that are returned to the sender after the revert.  
+The client of the parachain should offer a `revert` subcommand, however, this command does not revert finalized blocks. In this case, the finalized block equals the best block. As a consequence, no blocks can be reverted using that approach. Instead, a new chain specification file that forks off a new network and excludes the blocks that should be reverted has to be provided to the network. At last the associated relaychain must overwrite the latest head of the live parachain. The recovery can be achieved following those steps:
+1. Use the latest chainspec from the live parachain and
+    1. Exclude the blocks that should be reverted by using the [badBlocks](https://substrate.stackexchange.com/a/435/49) feature.
+    2. Copy the chainspec resulting from step 1.1 and change the `protocol_id`, i.e. `zeitgeist_v1` -> `zeitgeist_v2`.
+2. Instruct the bootnode providers to delete the chain data of the live parachain and to use the chainspec created at step 1.1 to sync the live parachain excluding all `badBlocks`. At least one bootnode should maintain the chain data of the halted chain during that process.
+3. After the bootnodes synchronized the live parachain and excluded the reverted blocks, they have to replace the chainspec that is used with the one generated in step 1.2.
+4. The chainspec generated in step 1.2 should be distributed to every node operator now, ideally in form of a new client that automatically uses it.
+5. Now the head of the live parachain has to be adjusted on the associated relaychain. It must represent the head of the latest block in the fork that does exclude the reverted blocks. The head of the latest block can be retrieved by using [a custom subcommand](https://github.com/zeitgeistpm/zeitgeist/blob/1f7ea6192eb9ad5921a99ad959e14d9065d8ca09/node/src/command.rs#L283-L298). After retrieval of the head, the manager account of the live parachain has to invoke [`registrar.set_current_head`](https://github.com/paritytech/polkadot/blob/5a43bc733024b6f2d4f1164db8991a393c8e14cb/runtime/common/src/paras_registrar.rs#L399-L407) to overwrite the head on the relaychain.
+6. After the head was overwritten, the live parachain should continue to produce blocks. The governance body should cancel any scheduled calls that are part of the migration before any of those executes.
+7. At last, after proper operation and cancellation of any migration related calls have been verified, the manager account should lock the parachain again by calling [`registar.add_lock`](https://github.com/paritytech/polkadot/blob/5a43bc733024b6f2d4f1164db8991a393c8e14cb/runtime/common/src/paras_registrar.rs#L373-L377). This removes the privileges of the manager account to act on behalf on the parachain. Should any problems occur now that halt the chain, the governance body of the associated relaychain has to be consulted to resolve the issues. Thus, this step should only be executed once absolute certain that the recovery was properly executed and succeeded.
 
 #### Case B: Equal `parachain_id` and `MqcHeads`
-This is the most forgiving case. Since the halting of the chain was not introduced by providing an invalid pallet configuration in the given context of a relaychain, but rather by just passing on the privilege to produce blocks, only the following steps are necessary to recover the parachain:
+This is the most forgiving case. Since the halting of the live parachain was not introduced by providing an invalid pallet configuration in the given context of a relaychain, but rather by just passing on the privilege to produce blocks, it is only necessary to return the slot leases and thus the privilege to produce blocks to the live parathread:
 1. Run the last used live parachain chainspec using a `--base-path` that points to a backup of the live chain folder.
 2. Send an XCM from the recovery parachain to the associated relaychain to unlock the manager account (see technical chapter for calldata)
 3. Only if step 2. succeeds, send an XCM from the recovery parachain to the associated relaychain to instruct swapping slot leases with the live parathread (see technical chapter for calldata)
