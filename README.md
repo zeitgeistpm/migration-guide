@@ -132,6 +132,7 @@ type CheckAssociatedRelayNumber = cumulus_pallet_parachain_system::AnyRelayNumbe
 - Include the [`utility`](https://github.com/paritytech/substrate/tree/ece32a72e934f6fe6705a7d418bbf3e71b4931ad/frame/utility) pallet to batch migration calls together.
 - (If `MqcHeads` differ) Ensure that `system.kill_storage` is not call-filtered if the parachain received or sent XCM.
 - (If `MqcHeads` or `parachain_id` differ) ensure that `system.set_storage` is not call-filtered if the `parachain_id` differs between the live and the shell parachain.
+- Ensure that no of the required calls are call-filtered.
 - (Case dependent) Consider any hooks that have an increased computational demand based on the interval between the timestamp of two blocks.
 - Apply a call-filter to filter token transfers. This ensures that deposits to and withdrawals from centralized exchanges do fail shortly before the migration. It also ensures that no value was exchanged in case reverting blocks during a recovery is necessary. Using `pallet-balances`, `orml-tokens` and `orml-currencies`, the call filter can look like that:
 
@@ -220,7 +221,7 @@ The last step is to instruct the relaychain to swap slot leases on behalf of the
 Once successfully executed, the live parachain should halt in any case and if *Case B* is executed, additionally the live parachain should be downgraded to a parathread and the recovery parathread should be upgraded to a parachain and start producing blocks. Now the actual migration of the chain data and wasm code to the shell parachain can begin.
 <br></br>
 
-The last step is to overwrite the head and runtime from the shell parachain with the head data and latest runtime of the halted live parachain. The latest runtime should be ready at a know place. The latest head data from the haltet live parachain can be fetched from the associated relaychain by querying the chain storage at `paras.heads(parachain_id)`, whereat `parachain_id` is the parachain id that is registered on the relaychain, i.e. the previous parachain id within `ParachainInfo::parachain_id` that was overwrriten.
+The last step is to overwrite the head and runtime from the shell parachain with the head data and latest runtime of the halted live parachain. The latest runtime should be ready at a know place. The latest head data from the haltet live parachain can be fetched from the associated relaychain by querying the chain storage at `paras.heads(parachain_id)`, whereat `parachain_id` is the parachain id that was registered on and retrieved from the relaychain, i.e. the previous parachain id within `ParachainInfo::parachain_id` that was overwrriten.
 
 Finally, the invocation of `soloToPara.schedule_migration(code, head_data)` on the shell parachain will schedule the migration. `code` represents the latest runtime of the live parachain, while `head_data` represents the latest head data from the live parachain. Relaychains have an upgrade delay, on Polkadot it is 1 hour as of writing this document. Exactly one block before the hour has passed, the head data is overwritten and in the next block the active runtime will also be overwritten. At this point in time, all the node operators should have replaced their parachain chain data with the latest chain data from the live parachain after it halted and also have the relaychain data of the relaychain that is associated to the shell parachain ready. The new client utilitzes this data and nodes should start to synchronize blocks starting from the halted block of the live parachain in a separated network.
 
@@ -240,7 +241,7 @@ The second approach can happen manually, semi-automatic or fully automatic. Thos
 
 Both have their pros and cons, evaluating those is not within the scope of this section.
 
-Once the migration was successful within the simulated environment, the migration can be executed in the production environment. If a testnet parachain exists that uses a custom relaychain, it is recommened to execute the migration from the custom relaychain to Rococo first for the testnet.
+Once the migration was successful within the simulated environment, the migration can be executed in the production environment. If a testnet parachain exists that uses a custom relaychain, it is recommended to execute the migration from the custom relaychain to Rococo first for the testnet.
 
 ## Recovery
 The recovery process is case-dependent, just as the migration process is.
@@ -251,7 +252,7 @@ It is impossible to provide a proper chain configuration after the latest block,
 The revert should incorporate the least blocks possible while offering enough time to cancel any scheduled operations related to the migration. At the same time, the revert should not surpass the block at which the migration runtime was deployed that filteres calls to transfer any tokens, otherwise value might have already been exchanged for tokens that are returned to the sender after the revert.  
 The client of the parachain should offer a `revert` subcommand, however, this command does not revert finalized blocks. In this case, the finalized block equals the best block. As a consequence, no blocks can be reverted using that approach. Instead, a new chain specification file that forks off a new network and excludes the blocks that should be reverted has to be provided to the network. At last the associated relaychain must overwrite the latest head of the live parachain. The recovery can be achieved following those steps:
 1. Use the latest chainspec from the live parachain and
-    1. Exclude the blocks that should be reverted by using the [badBlocks](https://substrate.stackexchange.com/a/435/49) feature.
+    1. Exclude the first block of a series of blocks that should be reverted by using the [badBlocks](https://substrate.stackexchange.com/a/435/49) feature.
     2. Copy the chainspec resulting from step 1.1 and change the `protocol_id`, i.e. `zeitgeist_v1` -> `zeitgeist_v2`.
 2. Instruct the bootnode providers to delete the chain data of the live parachain and to use the chainspec created at step 1.1 to sync the live parachain excluding all `badBlocks`. At least one bootnode should maintain the chain data of the halted chain during that process.
 3. After the bootnodes synchronized the live parachain and excluded the reverted blocks, they have to replace the chainspec that is used with the one generated in step 1.2.
