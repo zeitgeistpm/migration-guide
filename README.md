@@ -2,12 +2,12 @@
 
 Author: [M.Sc. Harald Heckmann](https://github.com/sea212) (also known as [sea212](https://github.com/sea212))  
 Mail: harald@zeitgeist.pm, mail@haraldheckmann.de  
-Date: Mar 5, 2023  
-Revision: 18
+Date: Mar 6, 2023  
+Revision: 19
 
 Reviewers: [B.Sc. Christopher Altmann](https://github.com/Chralt98) (chris@zeitgeist.pm), [Dr. Malte Kliemann](https://github.com/maltekliemann) (malte@zeitgeist.pm)
 
-KILT has already proven in October 2022 that an almost [seemless migration of a parachain from Kusama to Polkadot](https://polkadot.network/blog/first-parachain-successfully-migrates-from-kusama-to-polkadot) (and any other Polkadot-like runtime) is possible.
+KILT has already proven in October 2022 that an almost [seamless migration of a parachain from Kusama to Polkadot](https://polkadot.network/blog/first-parachain-successfully-migrates-from-kusama-to-polkadot) (and any other Polkadot-like runtime) is possible.
 
 > On October 3rd, KILT Protocol made history by becoming the first parachain to accomplish a full migration from the Kusama relaychain to the Polkadot Relay Chain.
 
@@ -28,7 +28,7 @@ The migration process is split into three parts:
 It is assumed that the entity behind the migration already owns a live parachain and a shell parachain. The shell parachain includes some access to root (i.e. governance or ideally sudo) and the [`solo-to-para`](https://github.com/paritytech/cumulus/blob/e23a0f2dfbeda62b96c1bd88d83126e0d5770f9c/pallets/solo-to-para) pallet.
 The first step is to provide a new chain specification file to all node operators, such that they can start to prepare the migration as early as possible on their side. The technical chapter describes all details.
 
-Ideally this chain specification file is already compiled within a new client, that node operators can start to run simulatenously alongside the client that operates the live parachain to sync the potentially big chain data of the relaychain that handles the shell parachain. It is also possible to fetch a snapshot for the Polkadot chain data, however, that process is only recommended when the parachain uses the same version for the dependencies as the relaychain. Alternatively, the team can synchronize the relaychain data using the new chain specification and the client that should be used after migration and then provide it as a snapshot to all node operators.
+Ideally this chain specification file is already compiled within a new client, that node operators can start to run simultaneously alongside the client that operates the live parachain to sync the potentially big chain data of the relaychain that handles the shell parachain. It is also possible to fetch a snapshot for the Polkadot chain data, however, that process is only recommended when the parachain uses the same version for the dependencies as the relaychain. Alternatively, the team can synchronize the relaychain data using the new chain specification and the client that should be used after migration and then provide it as a snapshot to all node operators.
 
 
 Once the preparations from the node perspective were made, the preparation of the migration on the live parachain can be started. The preparation of the live parachain is depicted in the following figure.
@@ -45,10 +45,10 @@ The first step of the migration is to unlock the parachain. This is achieved by 
 After the unlocking, a case distinctions happens. Should the live parachain have a different `parachain_id` or `MqcHeads` than the shell parachain, *case A* must be executed. In that case, adjusting those values in the live parachain halts the chain. It can be recovered directly and no recovery parachain is necessary. Should those values be equal between both parachains (live and shell), *case B* is the choice: Halting the live parachain by swapping the slot leases. In that case a recovery `parachain_id` and a associated recovery parathread have to be registered.
 
 #### Case A: Different `parachain_id` or `MqcHeads`
-When the `parachain_id` or `MqcHeads` differ between the live and shell parachain, adjustment of those values on the live parachain to equal those on the shell parachain is required, because the shell parachain will be overwritten by the live parachain. Since overwritting those values on the live parachain leads to a mismatch between the values stored on the associated relaychain, the parachain will become unable to produce blocks. However, it still is a parachain and has valid slot leases, thus it potentially can be recovered directly, given the prerequisite is met that the parachain was unlocked before halting it and thus allowing the manager account to overwrite the wasm code and head to a previous block at which the chain was still operational.
+When the `parachain_id` or `MqcHeads` differ between the live and shell parachain, adjustment of those values on the live parachain to equal those on the shell parachain is required, because the shell parachain will be overwritten by the live parachain. Since overwriting those values on the live parachain leads to a mismatch between the values stored on the associated relaychain, the parachain will become unable to produce blocks. However, it still is a parachain and has valid slot leases, thus it potentially can be recovered directly, given the prerequisite is met that the parachain was unlocked before halting it and thus allowing the manager account to overwrite the wasm code and head to a previous block at which the chain was still operational.
 
 #### Case B: Equal `parachain_id` and `MqcHeads`
-When the `parachain_id` or `MqcHeads` are equal between the shell and the live parachain, there is no obvious way to halt the live parachain before the migration while ensuring at the same time that after the migration the migrated chain will be able to operate properly. The logical consequence of this is to withdraw the priviledge to produce blocks from the live parachain chain. This is achieved by instructing the live parachain to signal the command to swap slot leases with another parathread, the recovery parathread, via XCM to the associated relaychain. It is important that the recovery parathread was provided with a functional genesis wasm and head to be able to recover the parachain in case of failure of the migration. Once the relaychain executes the instructions contained within the XCM, the slot leases are transferred from the live parachain to the recovery parathread. This effectively downgrades the live parachain to a parathread and upgrades the recovery parathread to a parachain, which from that point on will be capable to produce blocks if an operational genesis head and wasm were supplied during registration. On the other hand, the live parathread won't produce blocks anymore, unless block production time is explicitly bought. However, at the time of writing, the feature to buy execution time as a parathread is not available.
+When the `parachain_id` or `MqcHeads` are equal between the shell and the live parachain, there is no obvious way to halt the live parachain before the migration while ensuring at the same time that after the migration the migrated chain will be able to operate properly. The logical consequence of this is to withdraw the privilege to produce blocks from the live parachain chain. This is achieved by instructing the live parachain to signal the command to swap slot leases with another parathread, the recovery parathread, via XCM to the associated relaychain. It is important that the recovery parathread was provided with a functional genesis wasm and head to be able to recover the parachain in case of failure of the migration. Once the relaychain executes the instructions contained within the XCM, the slot leases are transferred from the live parachain to the recovery parathread. This effectively downgrades the live parachain to a parathread and upgrades the recovery parathread to a parachain, which from that point on will be capable to produce blocks if an operational genesis head and wasm were supplied during registration. On the other hand, the live parathread won't produce blocks anymore, unless block production time is explicitly bought. However, at the time of writing, the feature to buy execution time as a parathread is not available.
 <br></br>
 
 It is important that in either case, the halting instructions are only executed once it can be ensured that collators have had enough time to obtain the chain data of the relaychain that handles the shell parachain. Now that the live parachain is halted, the migration to another relaychain can happen.
@@ -67,10 +67,10 @@ On Polkadot the upgrade delay is approximately 1 hour. During that time, every n
 
 *Figure: Node folder migration*
 
-Once the migration is completed and the migrated parachain produces blocks, the production runtime can be deployed after a runtime upgrade cooldown period that is enforced by the relaychain.
+Once the migration is completed and the migrated parachain produces blocks, the production runtime can be deployed after a runtime upgrade cool down period that is enforced by the relaychain.
 
 ## Technical subtleties
-To prepare a mostly seemless migration from the perspective of a node operator, an adjusted chain specification file that ideally is compiled into a client should be provided. It should be ensured that the node operators have enough time to sync the relaychain that the shell parachain (migrate to) is attached to. The three main changes are:
+To prepare a mostly seamless migration from the perspective of a node operator, an adjusted chain specification file that ideally is compiled into a client should be provided. It should be ensured that the node operators have enough time to sync the relaychain that the shell parachain (migrate to) is attached to. The three main changes are:
 
 1. A new and unused `protocolId`, such that the new network does not try to connect to peers in the old network.
 2. A new `paraId` or `parachain_id` that matches the one on the shell parachain.
@@ -132,6 +132,7 @@ type CheckAssociatedRelayNumber = cumulus_pallet_parachain_system::AnyRelayNumbe
 - Include the [`utility`](https://github.com/paritytech/substrate/tree/ece32a72e934f6fe6705a7d418bbf3e71b4931ad/frame/utility) pallet to batch migration calls together.
 - (If `MqcHeads` differ) Ensure that `system.kill_storage` is not call-filtered if the parachain received or sent XCM.
 - (If `MqcHeads` or `parachain_id` differ) ensure that `system.set_storage` is not call-filtered if the `parachain_id` differs between the live and the shell parachain.
+- Ensure that no of the required calls are call-filtered.
 - (Case dependent) Consider any hooks that have an increased computational demand based on the interval between the timestamp of two blocks.
 - Apply a call-filter to filter token transfers. This ensures that deposits to and withdrawals from centralized exchanges do fail shortly before the migration. It also ensures that no value was exchanged in case reverting blocks during a recovery is necessary. Using `pallet-balances`, `orml-tokens` and `orml-currencies`, the call filter can look like that:
 
@@ -161,7 +162,7 @@ The runtime that is going to be deployed on the shell chain before the migration
 - It must include the [`solo-to-para`](https://github.com/paritytech/cumulus/blob/e23a0f2dfbeda62b96c1bd88d83126e0d5770f9c/pallets/solo-to-para) pallet.
 - It must include the [`sudo`](https://github.com/paritytech/substrate/tree/ece32a72e934f6fe6705a7d418bbf3e71b4931ad/frame/sudo) pallet and use a sudo key that the entity responsible for the migration owns.
 
-Once those prerequisites are met, the migration can be started. First, the migration runtime (that contains the [`solo-to-para`](https://github.com/paritytech/cumulus/blob/e23a0f2dfbeda62b96c1bd88d83126e0d5770f9c/pallets/solo-to-para) and [`sudo`](https://github.com/paritytech/substrate/tree/ece32a72e934f6fe6705a7d418bbf3e71b4931ad/frame/sudo) pallet) should be deployed on the shell parachain. Now the shell parachain is subject to a runtime upgrade cooldown period defined by the associated relaychain. The runtime upgrade delay defined by the relaychain should be respected, as a new runtime is deployed on the shell parachain during the migration. To avoid unnecessary downtime, the cooldown on the shell parachain should already have passed before continuing with the next steps.
+Once those prerequisites are met, the migration can be started. First, the migration runtime (that contains the [`solo-to-para`](https://github.com/paritytech/cumulus/blob/e23a0f2dfbeda62b96c1bd88d83126e0d5770f9c/pallets/solo-to-para) and [`sudo`](https://github.com/paritytech/substrate/tree/ece32a72e934f6fe6705a7d418bbf3e71b4931ad/frame/sudo) pallet) should be deployed on the shell parachain. Now the shell parachain is subject to a runtime upgrade cool down period defined by the associated relaychain. The runtime upgrade delay defined by the relaychain should be respected, as a new runtime is deployed on the shell parachain during the migration. To avoid unnecessary downtime, the cool down on the shell parachain should already have passed before continuing with the next steps.
 
 Next, the live parachain is prepared. It is highly encouraged to use governance proposals that outline all the steps that are about to be taken, such that the ecosystem has enough time to review, discuss and finally approve or reject the procedure.
 
@@ -178,7 +179,7 @@ After the unlocking of the parachain was verified, the next step is deploy the r
 Once the migration runtime was deployed, the potential adjustment of crucial storage values and the halting of the live parachain can happen on a case-by-case basis.
 
 #### Case A: Different `parachain_id` or `MqcHeads`
-In this case, the `parachain_id` and/or the `MqcHeads` are set to appropriate values used on the shell parachain. The runtime cooldown period should be respected to be able to quickly recover the chain in case of failure. After the cooldown period has passed, the storage values can be adjusted:
+In this case, the `parachain_id` and/or the `MqcHeads` are set to appropriate values used on the shell parachain. The runtime cool down period should be respected to be able to quickly recover the chain in case of failure. After the cool down period has passed, the storage values can be adjusted:
 
 Set `ParachainInfo::parachain_id` to the one used in 
 the shell parachain: 
@@ -187,7 +188,7 @@ the shell parachain:
 ```
 [(Decode)](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fzeitgeist-rpc.dwellir.com#/extrinsics/decode/0x000504800d715f2646c8f85767b5d2764bb2782604a74d81251e398fd8a0a4d55023bb3f102c080000)
 - Change the first two bytes of the calldata to represent the pallet index of `system` and the call index of `set_storage` inside your runtime.
-- Change the second tuple value to the scale-encoded `parachain_id` of your shell parachain. It can be retrieve by querying the raw key `0x0d715f2646c8f85767b5d2764bb2782604a74d81251e398fd8a0a4d55023bb3f` on the shell parachain (assuming the correct `parachain_id` is already set there).
+- Change the second tuple value to the scale-encoded `parachain_id` of your shell parachain. It can be retrieved by querying the raw key `0x0d715f2646c8f85767b5d2764bb2782604a74d81251e398fd8a0a4d55023bb3f` on the shell parachain (assuming the correct `parachain_id` is already set there).
 
 Reset `MqcHeads`: 
 ```
@@ -197,7 +198,7 @@ Reset `MqcHeads`:
 - Change the first two bytes of the calldata to represent the pallet index of `system` and the call index of `kill_storage` inside your runtime.
 - In this example the storage for `parachainSystem.lastDmqMqcHead` and `parachainSystem.lastHrmpMqcHeads` are reset. In case the shell parachain already received or sent XCM, those must be set to the values the relaychain of the shell parachain holds.
 
-Both extrinsics **must be executed together in the same block**, as either one of them will halt the live parachain. The `utility.batch_all` dispatchable call can be utilized to achieved this.
+Both extrinsics **must be executed together in the same block**, as either one of them will halt the live parachain. The `utility.batch_all` dispatchable call can be utilized to achieve this.
 
 #### Case B: Equal `parachain_id` and `MqcHeads`
 The first step is to reserve a `parachain_id` on the same relaychain that the live parachain is using by invoking the `registrar.reserve` and `registrar.register` dispatchable call. It must be ensured that a working genesis state and a working genesis wasm is included that contains `XCM` functionality and the `Sudo` pallet.
@@ -220,14 +221,14 @@ The last step is to instruct the relaychain to swap slot leases on behalf of the
 Once successfully executed, the live parachain should halt in any case and if *Case B* is executed, additionally the live parachain should be downgraded to a parathread and the recovery parathread should be upgraded to a parachain and start producing blocks. Now the actual migration of the chain data and wasm code to the shell parachain can begin.
 <br></br>
 
-The last step is to overwrite the head and runtime from the shell parachain with the head data and latest runtime of the halted live parachain. The latest runtime should be ready at a know place. The latest head data from the haltet live parachain can be fetched from the associated relaychain by querying the chain storage at `paras.heads(parachain_id)`, whereat `parachain_id` is the parachain id that is registered on the relaychain, i.e. the previous parachain id within `ParachainInfo::parachain_id` that was overwrriten.
+The last step is to overwrite the head and runtime from the shell parachain with the head data and latest runtime of the halted live parachain. The latest runtime should be ready at a know place. The latest head data from the halted live parachain can be fetched from the associated relaychain by querying the chain storage at `paras.heads(parachain_id)`, whereat `parachain_id` is the parachain id that was registered on and retrieved from the relaychain, i.e. the previous parachain id within `ParachainInfo::parachain_id` that was overwritten.
 
-Finally, the invocation of `soloToPara.schedule_migration(code, head_data)` on the shell parachain will schedule the migration. `code` represents the latest runtime of the live parachain, while `head_data` represents the latest head data from the live parachain. Relaychains have an upgrade delay, on Polkadot it is 1 hour as of writing this document. Exactly one block before the hour has passed, the head data is overwritten and in the next block the active runtime will also be overwritten. At this point in time, all the node operators should have replaced their parachain chain data with the latest chain data from the live parachain after it halted and also have the relaychain data of the relaychain that is associated to the shell parachain ready. The new client utilitzes this data and nodes should start to synchronize blocks starting from the halted block of the live parachain in a separated network.
+Finally, the invocation of `soloToPara.schedule_migration(code, head_data)` on the shell parachain will schedule the migration. `code` represents the latest runtime of the live parachain, while `head_data` represents the latest head data from the live parachain. Relaychains have an upgrade delay, on Polkadot it is 1 hour as of writing this document. Exactly one block before the hour has passed, the head data is overwritten and in the next block the active runtime will also be overwritten. At this point in time, all the node operators should have replaced their parachain chain data with the latest chain data from the live parachain after it halted and also have the relaychain data of the relaychain that is associated to the shell parachain ready. The new client utilizes this data and nodes should start to synchronize blocks starting from the halted block of the live parachain in a separated network.
 
-Finally, the migration runtime can be replaced by a proper production runtime once the runtime upgrade cooldown period has passed.
+Finally, the migration runtime can be replaced by a proper production runtime once the runtime upgrade cool down period has passed.
 
 ## Testing the migration
-It is immensely important that the migration is tested before applying it to a producting network to ensure familiarity with the process and to verify that the suggested approach is also applicable to the given context.
+It is immensely important that the migration is tested before applying it to a production network to ensure familiarity with the process and to verify that the suggested approach is also applicable to the given context.
 
 There are multiple approaches that can be pursued to test the migration. In any case, it should be ensured that the parachain and the relaychain both are as close to production as possible. Whatever approach is selected, those steps should be included:
 
@@ -240,7 +241,7 @@ The second approach can happen manually, semi-automatic or fully automatic. Thos
 
 Both have their pros and cons, evaluating those is not within the scope of this section.
 
-Once the migration was successful within the simulated environment, the migration can be executed in the production environment. If a testnet parachain exists that uses a custom relaychain, it is recommened to execute the migration from the custom relaychain to Rococo first for the testnet.
+Once the migration was successful within the simulated environment, the migration can be executed in the production environment. If a testnet parachain exists that uses a custom relaychain, it is recommended to execute the migration from the custom relaychain to Rococo first for the testnet.
 
 ## Recovery
 The recovery process is case-dependent, just as the migration process is.
@@ -248,10 +249,10 @@ The recovery process is case-dependent, just as the migration process is.
 #### Case A: Different `parachain_id` or `MqcHeads`
 In this case the live parachain had to be halted by providing an invalid pallet configuration in the given context of a relaychain, the following approach has to be applied to recover the parachain.  
 It is impossible to provide a proper chain configuration after the latest block, since the block production is halted and thus no state changes can be introduced. Consequently, the chain has to be reverted back to a previous functioning state.  
-The revert should incorporate the least blocks possible while offering enough time to cancel any scheduled operations related to the migration. At the same time, the revert should not surpass the block at which the migration runtime was deployed that filteres calls to transfer any tokens, otherwise value might have already been exchanged for tokens that are returned to the sender after the revert.  
+The revert should incorporate the least number of blocks possible while offering enough time to cancel any scheduled operations related to the migration. At the same time, the revert should not surpass the block at which the migration runtime was deployed that filters calls to transfer any tokens, otherwise value might have already been exchanged for tokens that are returned to the sender after the revert.  
 The client of the parachain should offer a `revert` subcommand, however, this command does not revert finalized blocks. In this case, the finalized block equals the best block. As a consequence, no blocks can be reverted using that approach. Instead, a new chain specification file that forks off a new network and excludes the blocks that should be reverted has to be provided to the network. At last the associated relaychain must overwrite the latest head of the live parachain. The recovery can be achieved following those steps:
 1. Use the latest chainspec from the live parachain and
-    1. Exclude the blocks that should be reverted by using the [badBlocks](https://substrate.stackexchange.com/a/435/49) feature.
+    1. Exclude the first block of a series of blocks that should be reverted by using the [badBlocks](https://substrate.stackexchange.com/a/435/49) feature.
     2. Copy the chainspec resulting from step 1.1 and change the `protocol_id`, i.e. `zeitgeist_v1` -> `zeitgeist_v2`.
 2. Instruct the bootnode providers to delete the chain data of the live parachain and to use the chainspec created at step 1.1 to sync the live parachain excluding all `badBlocks`. At least one bootnode should maintain the chain data of the halted chain during that process.
 3. After the bootnodes synchronized the live parachain and excluded the reverted blocks, they have to replace the chainspec that is used with the one generated in step 1.2.
@@ -263,8 +264,8 @@ The client of the parachain should offer a `revert` subcommand, however, this co
 #### Case B: Equal `parachain_id` and `MqcHeads`
 This is the most forgiving case. Since the halting of the live parachain was not introduced by providing an invalid pallet configuration in the given context of a relaychain, but rather by just passing on the privilege to produce blocks, it is only necessary to return the slot leases and thus the privilege to produce blocks to the live parathread:
 1. Run the last used live parachain chainspec using a `--base-path` that points to a backup of the live chain folder.
-2. Send an XCM from the recovery parachain to the associated relaychain to unlock the manager account (see technical chapter for calldata)
-3. Only if step 2. succeeds, send an XCM from the recovery parachain to the associated relaychain to instruct swapping slot leases with the live parathread (see technical chapter for calldata)
-4. Use the manager account of the live parathread to instruct the associated relaychain to swap slot leases with the recovery parachain
+2. Send an XCM from the recovery parachain to the associated relaychain to unlock the manager account (see technical chapter for calldata).
+3. Only if step 2. succeeds, send an XCM from the recovery parachain to the associated relaychain to instruct swapping slot leases with the live parathread (see technical chapter for calldata).
+4. Use the manager account of the live parathread to instruct the associated relaychain to swap slot leases with the recovery parachain.
 
 That should transfer the slot leases back to the live parathread from the recovery parachain, which downgrades the recovery parachain to a parathread and upgrades the live parathread back to a parachain, effectively granting it the privilege to produce blocks.
