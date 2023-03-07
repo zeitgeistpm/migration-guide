@@ -2,8 +2,8 @@
 
 Author: [M.Sc. Harald Heckmann](https://github.com/sea212) (also known as [sea212](https://github.com/sea212))  
 Mail: harald@zeitgeist.pm, mail@haraldheckmann.de  
-Date: Mar 6, 2023  
-Revision: 19
+Date: Mar 7, 2023  
+Revision: 20
 
 Reviewers: [B.Sc. Christopher Altmann](https://github.com/Chralt98) (chris@zeitgeist.pm), [Dr. Malte Kliemann](https://github.com/maltekliemann) (malte@zeitgeist.pm)
 
@@ -179,7 +179,7 @@ After the unlocking of the parachain was verified, the next step is deploy the r
 Once the migration runtime was deployed, the potential adjustment of crucial storage values and the halting of the live parachain can happen on a case-by-case basis.
 
 #### Case A: Different `parachain_id` or `MqcHeads`
-In this case, the `parachain_id` and/or the `MqcHeads` are set to appropriate values used on the shell parachain. The runtime cool down period should be respected to be able to quickly recover the chain in case of failure. After the cool down period has passed, the storage values can be adjusted:
+In this case, the `parachain_id` and/or the `MqcHeads` are set to appropriate values used on the shell parachain.
 
 Set `ParachainInfo::parachain_id` to the one used in 
 the shell parachain: 
