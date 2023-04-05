@@ -18,7 +18,7 @@ The starting position is that one parachain, the live parachain, would like to m
 
 ![Starting position](img/overview.png)
 
-*Figure: Starting position*
+*Figure: Starting position [(source)](img/source/overview.puml)*
 
 The migration process is split into three parts:
 1. A new chainspec (ideally within a client) is provided that's adjusted for the new relaychain.
