@@ -1,0 +1,21 @@
+@startuml
+title Overwriting the runtime and head in the shell parachain with solo-to-para pallet
+hide footbox
+
+Actor "Governance or Sudo" as ADMIN
+Participant "Shell Parachain" as PARA
+Participant "Relaychain" as RELAY
+
+
+ADMIN -> PARA: Propose: ""solo-to-para::migrate(runtime, head)""
+PARA -> PARA: Store ""runtime"" and ""head""
+note left: Proposal being enacted
+PARA -> RELAY: upgrade ""runtime"" request
+note across: Wait until ""validationUpgradeDelay - 1"" (by default ~1 hour on Polkadot) passes
+PARA -> RELAY: Overwrite ""head"" on Relay Chain
+note across: One block passes
+RELAY -> RELAY: apply ""runtime"" for Shell Parachain
+RELAY -> PARA: ""upgradeGoAhead"" signal
+PARA -> PARA: Apply ""runtime""
+
+@enduml

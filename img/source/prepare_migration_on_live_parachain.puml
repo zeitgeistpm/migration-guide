@@ -1,0 +1,39 @@
+@startuml
+
+title Preparing the parachain that should be migrated
+hide footbox
+
+Actor "Recovery Manager" as MANAGER
+Actor "Governance or Sudo" as ADMIN
+Participant "Live Parachain" as PARA
+Participant "Live Parathread" as PARAT
+Participant "Relaychain A" as RELAY
+Participant "Recovery Parathread" as PARAT_RECOVERY
+Participant "Recovery Parachain" as PARA_RECOVERY
+
+
+ADMIN -> PARA: Deploy adjusted runtime
+PARA -> RELAY: Upgrade runtime request
+RELAY -> PARA: Go Ahead
+ADMIN -> PARA: Unlock parachain\n(manager can swap, set head and wasm)
+
+note over PARA : To be able to recover the chain, it is absolutely mandatory that the unlock was successful
+
+alt One condition is met: The Parachain id or the MqcHeads differ between the live and shell parachain
+    ADMIN -> PARA: Batch all:\n 1. (Re)set (XCM) MqcHeads\n 2. Change own parachain id\n      to the one used in shell parachain
+else Parachain id and MqcHeads are equal
+    MANAGER -> RELAY: Register recovery parathread
+    RELAY -> PARAT_RECOVERY **: Spawn
+    MANAGER -> RELAY: Signal intention to swap slot leases with live parachain
+    ADMIN -> PARA: Swap slot leases with recovery parathread
+    PARA -> RELAY: Swap slot leases with recovery parathread (XCM)
+    RELAY -> PARA: Downgrade
+    PARA -> PARAT **: Downgrade
+    destroy PARA
+    RELAY -> PARAT_RECOVERY: Upgrade
+    PARAT_RECOVERY -> PARA_RECOVERY ** : Upgrade
+    destroy PARAT_RECOVERY
+    PARA_RECOVERY -> PARA_RECOVERY: Produce blocks
+end
+
+@enduml
