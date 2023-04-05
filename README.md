@@ -212,7 +212,8 @@ The second step is to instruct the relaychain to swap slot leases on behalf of t
 
 The third step is to fund the parachain sovereign account. It has to be ensured that the parachain sovereign account is funded on the relaychain of the live parachain, such that the parachain can pay the execution of the instructions contained within the XCM. [Moonbeam's xcm-tools](https://github.com/PureStake/xcm-tools) can be used to retrieve the address of the parachain sovereign account: `ts-node calculate-sovereign-account.ts  --para-id <live_para_id> --relay <relay-of-live-para>`
 
-The last step is to instruct the relaychain to swap slot leases on behalf of the live parachain by utilizing XCM. This is the calldata: 
+If the `parachain_id` and/or `MqcHeads` have to be set as well, because they differ between the live parachain and the shell parachain, they have to be set **before** executing the slot lease swap. It is recommended to the batch those calls with the instruction to swap slot leases, which is achieved by instructing the relaychain to swap slot leases on behalf of the live parachain by utilizing XCM. This is the calldata:
+ 
 ```
 0x7a000101000210000400000000070010a5d4e81300000000070010a5d4e8010700bca0650106000300943577284603e7070000400800000d0100040001010070617261e7070000000000000000000000000000000000000000000000000000
 ```
@@ -223,7 +224,7 @@ The last step is to instruct the relaychain to swap slot leases on behalf of the
 - Should the relaychain associated to the live parachain have a number of decimal fractional places for their native token that differs from 12, the balances in the call also have to be adjusted accordingly. In this example it is assumed that Kusama is used and 1 KSM is available in the parachain sovereign account.
 <br></br>
 
-If the `MqcHeads` have to be set as well, because they differ between the live parachain and the shell parachain, they have to be set **before** executing the slot lease swap. This may be done in one batch call, assuming that the `MqcHeads` are equal on the live parachain for the old and new parachain id, otherwise this operation will already halt the chain. Once successfully executed, the live parachain should halt in any case and if *Case B* is executed, additionally the live parachain should be downgraded to a parathread and the recovery parathread should be upgraded to a parachain and start producing blocks. Now the actual migration of the chain data and wasm code to the shell parachain can begin.
+Once successfully executed, the live parachain should halt in any case and if *Case B* is executed, additionally the live parachain should be downgraded to a parathread and the recovery parathread should be upgraded to a parachain and start producing blocks. Now the actual migration of the chain data and wasm code to the shell parachain can begin.
 <br></br>
 
 The last step is to overwrite the head and runtime from the shell parachain with the head data and latest runtime of the halted live parachain. The latest runtime should be ready at a know place. The latest head data from the halted live parachain can be fetched from the associated relaychain by querying the chain storage at `paras.heads(parachain_id)`, whereat `parachain_id` is the parachain id that was registered on and retrieved from the relaychain, i.e. the previous parachain id within `ParachainInfo::parachain_id` that was overwritten.
