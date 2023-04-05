@@ -1,6 +1,6 @@
 # Migrating to another relaychain - A complete guide
 
-Original origin: https://github.com/zeitgeistpm/migration-guide
+Document origin: https://github.com/zeitgeistpm/migration-guide
 
 Author: [M.Sc. Harald Heckmann](https://github.com/sea212) (also known as [sea212](https://github.com/sea212))  
 Mail: harald@zeitgeist.pm, mail@haraldheckmann.de
