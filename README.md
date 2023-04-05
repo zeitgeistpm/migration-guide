@@ -212,8 +212,8 @@ The second step is to instruct the relaychain to swap slot leases on behalf of t
 
 The third step is to fund the parachain sovereign account. It has to be ensured that the parachain sovereign account is funded on the relaychain of the live parachain, such that the parachain can pay the execution of the instructions contained within the XCM. [Moonbeam's xcm-tools](https://github.com/PureStake/xcm-tools) can be used to retrieve the address of the parachain sovereign account: `ts-node calculate-sovereign-account.ts  --para-id <live_para_id> --relay <relay-of-live-para>`
 
-If the `parachain_id` and/or `MqcHeads` have to be set as well, because they differ between the live parachain and the shell parachain, they have to be set **before** executing the slot lease swap. It is recommended to the batch those calls with the instruction to swap slot leases, which is achieved by instructing the relaychain to swap slot leases on behalf of the live parachain by utilizing XCM. This is the calldata:
- 
+If the `parachain_id` and/or `MqcHeads` have to be set as well, because they differ between the live parachain and the shell parachain, they have to be set **before** executing the slot lease swap. It is recommended to the batch those calls with the instruction to swap slot leases. The slot leases is achieved by instructing the relaychain to swap slot leases on behalf of the live parachain by utilizing XCM. This is the calldata:
+
 ```
 0x7a000101000210000400000000070010a5d4e81300000000070010a5d4e8010700bca0650106000300943577284603e7070000400800000d0100040001010070617261e7070000000000000000000000000000000000000000000000000000
 ```
