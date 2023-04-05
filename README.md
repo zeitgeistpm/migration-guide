@@ -183,7 +183,7 @@ After the unlocking of the parachain was verified, the next step is deploy the r
 
 Once the migration runtime was deployed, the potential adjustment of crucial storage values and the halting of the live parachain can happen on a case-by-case basis.
 
-#### Case A: Different `parachain_id` or `MqcHeads`
+#### Case A: Different `parachain_id` or `MqcHeads` and `MqcHeads` differ between the old and new parachain id on the live parachain
 In this case, the `parachain_id` and/or the `MqcHeads` are set to appropriate values used on the shell parachain.
 
 Set `ParachainInfo::parachain_id` to the one used in 
@@ -205,7 +205,7 @@ Reset `MqcHeads`:
 
 Both extrinsics **must be executed together in the same block**, as either one of them will halt the live parachain. The `utility.batch_all` dispatchable call can be utilized to achieve this.
 
-#### Case B: Equal `parachain_id` and `MqcHeads`
+#### Case B: Equal `parachain_id` and `MqcHeads` or `MqcHeads` are equal between the old and new parachain id on the live parachain
 The first step is to reserve a `parachain_id` on the same relaychain that the live parachain is using by invoking the `registrar.reserve` and `registrar.register` dispatchable call. It must be ensured that a working genesis state and a working genesis wasm is included that contains `XCM` functionality and the `Sudo` pallet.
 
 The second step is to instruct the relaychain to swap slot leases on behalf of the recovery parathread by invoking `registrar.swap` using the manager account. `id` should contain the `parachain_id` of the recovery parathread and `other` should contain the `parachain_id` of the live parachain.
@@ -223,7 +223,7 @@ The last step is to instruct the relaychain to swap slot leases on behalf of the
 - Should the relaychain associated to the live parachain have a number of decimal fractional places for their native token that differs from 12, the balances in the call also have to be adjusted accordingly. In this example it is assumed that Kusama is used and 1 KSM is available in the parachain sovereign account.
 <br></br>
 
-Once successfully executed, the live parachain should halt in any case and if *Case B* is executed, additionally the live parachain should be downgraded to a parathread and the recovery parathread should be upgraded to a parachain and start producing blocks. Now the actual migration of the chain data and wasm code to the shell parachain can begin.
+If the `MqcHeads` have to be set as well, because they differ between the live parachain and the shell parachain, they have to be set **before** executing the slot lease swap. This may be done in one batch call, assuming that the `MqcHeads` are equal on the live parachain for the old and new parachain id, otherwise this operation will already halt the chain. Once successfully executed, the live parachain should halt in any case and if *Case B* is executed, additionally the live parachain should be downgraded to a parathread and the recovery parathread should be upgraded to a parachain and start producing blocks. Now the actual migration of the chain data and wasm code to the shell parachain can begin.
 <br></br>
 
 The last step is to overwrite the head and runtime from the shell parachain with the head data and latest runtime of the halted live parachain. The latest runtime should be ready at a know place. The latest head data from the halted live parachain can be fetched from the associated relaychain by querying the chain storage at `paras.heads(parachain_id)`, whereat `parachain_id` is the parachain id that was registered on and retrieved from the relaychain, i.e. the previous parachain id within `ParachainInfo::parachain_id` that was overwritten.
