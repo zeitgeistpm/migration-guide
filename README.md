@@ -166,7 +166,12 @@ Once those prerequisites are met, the migration can be started. First, the migra
 
 Next, the live parachain is prepared. It is highly encouraged to use governance proposals that outline all the steps that are about to be taken, such that the ecosystem has enough time to review, discuss and finally approve or reject the procedure.
 
-In any case, the first step is to unlock the manager account. This is the call data for the Zeitgeist parachain: [`0x7a000101000210000400000000070010a5d4e81300000000070010a5d4e8010700bca0650106000300943577184604350800000d010004000101007061726135080000000000000000000000000000000000000000000000000000`](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fzeitgeist-rpc.dwellir.com#/extrinsics/decode/0x7a000101000210000400000000070010a5d4e81300000000070010a5d4e8010700bca0650106000300943577184604350800000d010004000101007061726135080000000000000000000000000000000000000000000000000000)
+In any case, the first step is to unlock the manager account. This is the call data for the Zeitgeist parachain: 
+```
+0x7a000101000210000400000000070010a5d4e81300000000070010a5d4e8010700bca0650106000300943577184604350800000d010004000101007061726135080000000000000000000000000000000000000000000000000000
+```
+[(Decode)](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fzeitgeist-rpc.dwellir.com#/extrinsics/decode/0x7a000101000210000400000000070010a5d4e81300000000070010a5d4e8010700bca0650106000300943577184604350800000d010004000101007061726135080000000000000000000000000000000000000000000000000000)
+
 - Change the first two bytes of the calldata to represent the pallet index of `polkadot-xcm` and the following two bytes to represent the `send` call inside your runtime.
 - Change the calldata within the `Transact` XCM instruction, it looks like that: [`0x460435080000`](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fkusama-rpc.polkadot.io#/extrinsics/decode/0x460435080000). The `para` field within the call should represent the `parachain_id` from the live parachain. If the migration should happen from Kusama to another relaychain, the [Kusama websocket endpoint](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fkusama-rpc.polkadot.io#/extrinsics) can be utilized to achieve that (decode calldata, modify, copy new calldata).
 - Change the `AccountId` within the `DepositAsset` instruction to the address of your sovereign account. You can use [Moonbeams xcm-tools](https://github.com/PureStake/xcm-tools) to retrieve that address: `ts-node calculate-sovereign-account.ts  --para-id <live_para_id> --relay <relay-of-live-para>`
