@@ -1,0 +1,49 @@
+@startuml
+title Node folder migration
+skinparam roundCorner 15
+actor "Infra-Eng." as Infra_Eng
+
+folder "Live parachain" as Live_Para {
+  folder "Parachain Data" as Live_Para_Data {
+    database Chain as Live_Para_Chain
+    folder Keystore as Live_Para_Keystore
+    folder Network as Live_Para_Network
+    Live_Para_Chain -[hidden]d-> Live_Para_Keystore
+    Live_Para_Keystore -[hidden]d-> Live_Para_Network
+  }
+
+  folder "Relaychain Data" as Live_Relay_Data {
+    database Chain as Live_Relay_Chain
+    folder Keystore as Live_Relay_Keystore
+    folder Network as Live_Relay_Network
+    Live_Relay_Chain -[hidden]d-> Live_Relay_Keystore
+    Live_Relay_Keystore -[hidden]d-> Live_Relay_Network
+  }
+
+  Live_Para_Data -[hidden]r-> Live_Relay_Data
+}
+
+
+folder "Shell parachain" as Shell_Para {
+  folder "Relaychain Data" as Shell_Relay_Data {
+    database Chain as Shell_Relay_Chain
+    folder Keystore as Shell_Relay_Keystore
+    folder Network as Shell_Relay_Network
+    Shell_Relay_Chain -[hidden]d-> Shell_Relay_Keystore
+    Shell_Relay_Keystore -[hidden]d-> Shell_Relay_Network
+  }
+
+  folder "Parachain Data" as Shell_Para_Data {
+    database Chain as Shell_Para_Chain
+    folder Keystore as Shell_Para_Keystore
+    folder Network as Shell_Para_Network
+    Shell_Para_Chain -[hidden]d-> Shell_Para_Keystore
+    Shell_Para_Keystore -[hidden]d-> Shell_Para_Network
+  }
+
+  Shell_Para_Data -[hidden]r-> Shell_Relay_Data
+}
+
+Live_Para_Data -[thickness=2]d-> Infra_Eng
+Infra_Eng -[thickness=2]u-> Shell_Para_Data
+@enduml

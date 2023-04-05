@@ -1,0 +1,15 @@
+@startuml
+title Starting position
+
+package "Production" as SIM {
+  component "   Relaychain A   " as RELAY_A
+  component "   Relaychain B   " as RELAY_B
+  component "Live Parachain" as PARA_A
+  component "Shell Parachain" as PARA_B
+}
+
+RELAY_A -d- PARA_A
+RELAY_B -d- PARA_B
+RELAY_A -[hidden]> RELAY_B
+
+@enduml
