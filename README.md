@@ -16,9 +16,9 @@ KILT also provided some hints in regards to the process from a [technical perspe
 ## Conceptual overview of the migration process
 The starting position is that one parachain, the live parachain, would like to migrate from one relaychain to another. On the other relaychain another parachain, the shell parachain, awaits to be replaced by the live parachain:
 
-![Starting position](img/overview.png)
+![Starting position](https://github.com/zeitgeistpm/migration-guide/blob/main/img/overview.png?raw=true)
 
-*Figure: Starting position [(source)](img/source/overview.puml)*
+*Figure: Starting position [(source)](https://github.com/zeitgeistpm/migration-guide/blob/main/img/source/overview.puml)*
 
 The migration process is split into three parts:
 1. A new chainspec (ideally within a client) is provided that's adjusted for the new relaychain.
@@ -33,9 +33,9 @@ Ideally this chain specification file is already compiled within a new client, t
 
 Once the preparations from the node perspective were made, the preparation of the migration on the live parachain can be started. The preparation of the live parachain is depicted in the following figure.
 
-![Preparing the parachain that should be migrated](img/prepare_migration_on_live_parachain.png)
+![Preparing the parachain that should be migrated](https://github.com/zeitgeistpm/migration-guide/blob/main/img/prepare_migration_on_live_parachain.png?raw=true)
 
-*Figure: Preparing the parachain that should be migrated [(source)](img/source/prepare_migration_on_live_parachain.puml)*
+*Figure: Preparing the parachain that should be migrated [(source)](https://github.com/zeitgeistpm/migration-guide/blob/main/img/source/prepare_migration_on_live_parachain.puml)*
 
 To avoid forks and the need to blacklist blocks, it is mandatory that the live parachain is halted. This condition should enable anyone who is responsible for that process to experience an alien level of respect. The respect comes from the fact that should the migration fail and leave behind two broken parachains, the operation of the whole parachain is halted for at least two weeks, should the Fellowship (OpenGov, Gov2) or the Technical Committee (Gov1) not decide to fast track the repairing of the broken parachain. To avoid running into this situation, the manager account of the live parachain is unlocked, effectively granting the manager account all the privileges necessary to do the recovery. In rare circumstances halting the chain requires the transferral of slot swap leases. In that case a third parachain, the recovery parachain is introduced.
 
@@ -55,17 +55,17 @@ It is important that in either case, the halting instructions are only executed 
 
 To execute the migration, the current [validation code (runtime)](https://docs.substrate.io/fundamentals/runtime-development/) and the current [head](https://substrate.stackexchange.com/a/7323/49) have to be extracted from the halted live parachain (that is a parathread now). Once those are available, they can be injected into the shell parachain, as described in the following figure.
 
-![Replace shell parachain](img/solo-to-para-upgrade.png)
+![Replace shell parachain](https://github.com/zeitgeistpm/migration-guide/blob/main/img/solo-to-para-upgrade.png?raw=true)
 
-*Figure: Overwriting the runtime and head in the shell parachain with solo-to-para pallet [(source)](img/source/solo-to-para-upgrade.puml)*
+*Figure: Overwriting the runtime and head in the shell parachain with solo-to-para pallet [(source)](https://github.com/zeitgeistpm/migration-guide/blob/main/img/source/solo-to-para-upgrade.puml)*
 
 The figure shows how the [`solo-to-para`](https://github.com/paritytech/cumulus/blob/e23a0f2dfbeda62b96c1bd88d83126e0d5770f9c/pallets/solo-to-para) pallet is utilized to apply the current [validation code (runtime)](https://docs.substrate.io/fundamentals/runtime-development/) and the current [head](https://substrate.stackexchange.com/a/7323/49) of the halted live parachain (which is a parathread by now) to the shell parachain. The shell parachain signals the relaychain that it wants to upgrade the current [validation code (runtime)](https://docs.substrate.io/fundamentals/runtime-development/) and the current [head](https://substrate.stackexchange.com/a/7323/49). Once the right time has come (which depends on the configuration of the relaychain), those upgrades are applied.
 
 On Polkadot the upgrade delay is approximately 1 hour. During that time, every node operator should replace the shell chain data with the live chain data. Once the upgrade has been applied, operation should continue as expected. The following figure depicts the migration of the live parachain data.
 
-![Node folder migration](img/node_folder_migration.png)
+![Node folder migration](https://github.com/zeitgeistpm/migration-guide/blob/main/img/node_folder_migration.png?raw=true)
 
-*Figure: Node folder migration [(source)](img/source/node_folder_migration.puml)*
+*Figure: Node folder migration [(source)](https://github.com/zeitgeistpm/migration-guide/blob/main/img/source/node_folder_migration.puml)*
 
 Once the migration is completed and the migrated parachain produces blocks, the production runtime can be deployed after a runtime upgrade cool down period that is enforced by the relaychain.
 
