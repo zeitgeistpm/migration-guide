@@ -16,7 +16,7 @@ KILT also provided some hints in regards to the process from a [technical perspe
 ## Conceptual overview of the migration process
 The starting position is that one parachain, the live parachain, would like to migrate from one relaychain to another. On the other relaychain another parachain, the shell parachain, awaits to be replaced by the live parachain:
 
-![Starting position](https://i.imgur.com/XM8O7rJ.png)
+![Starting position](img/overview.png)
 
 *Figure: Starting position*
 
@@ -33,7 +33,7 @@ Ideally this chain specification file is already compiled within a new client, t
 
 Once the preparations from the node perspective were made, the preparation of the migration on the live parachain can be started. The preparation of the live parachain is depicted in the following figure.
 
-![Preparing the parachain that should be migrated](https://i.imgur.com/Iw2pCZ9.png)
+![Preparing the parachain that should be migrated](img/prepare_migration_on_live_parachain.png)
 
 *Figure: Preparing the parachain that should be migrated*
 
@@ -55,7 +55,7 @@ It is important that in either case, the halting instructions are only executed 
 
 To execute the migration, the current [validation code (runtime)](https://docs.substrate.io/fundamentals/runtime-development/) and the current [head](https://substrate.stackexchange.com/a/7323/49) have to be extracted from the halted live parachain (that is a parathread now). Once those are available, they can be injected into the shell parachain, as described in the following figure.
 
-![Replace shell parachain](https://i.imgur.com/Y5LGaUx.png)
+![Replace shell parachain](img/solo-to-para-upgrade.png)
 
 *Figure: Overwriting the runtime and head in the shell parachain with solo-to-para pallet*
 
@@ -63,7 +63,7 @@ The figure shows how the [`solo-to-para`](https://github.com/paritytech/cumulus/
 
 On Polkadot the upgrade delay is approximately 1 hour. During that time, every node operator should replace the shell chain data with the live chain data. Once the upgrade has been applied, operation should continue as expected. The following figure depicts the migration of the live parachain data.
 
-![Node folder migration](https://i.imgur.com/i5sDWVI.png)
+![Node folder migration](img/node_folder_migration.png)
 
 *Figure: Node folder migration*
 
