@@ -19,13 +19,31 @@ ADMIN -> PARA: Unlock parachain\n(manager can swap, set head and wasm)
 
 note over PARA : To be able to recover the chain, it is absolutely mandatory that the unlock was successful
 
-alt One condition is met: The Parachain id or the MqcHeads differ between the live and shell parachain
-    ADMIN -> PARA: Batch all:\n 1. (Re)set (XCM) MqcHeads\n 2. Change own parachain id\n      to the one used in shell parachain
-else Parachain id and MqcHeads are equal
+alt Both conditions are met:\n1. The parachain id or the MqcHeads differ between the live and shell parachain\n2. The MqcHeads differ between the old and new parachain id on the live parachain
+    alt The parachain uses the author-inherent pallet from the Nimbus framework
+        ADMIN -> PARA: Batch all:\n 1. Set MqcHeads to the\n      one used in shell parachain\n 2. Change own parachain id\n      to the one used in shell parachain\n3. Reset HighestSlotSeen in author-inherent
+    else Otherwise
+        ADMIN -> PARA: Batch all:\n 1. Set MqcHeads to the\n      one used in shell parachain\n 2. Change own parachain id\n      to the one used in shell parachain
+    end
+else Otherwise
     MANAGER -> RELAY: Register recovery parathread
     RELAY -> PARAT_RECOVERY **: Spawn
     MANAGER -> RELAY: Signal intention to swap slot leases with live parachain
-    ADMIN -> PARA: Swap slot leases with recovery parathread
+
+    alt The parachain id or the MqcHeads differ between the live and shell parachain
+        alt The parachain uses the author-inherent pallet from the Nimbus framework
+            ADMIN -> PARA: Batch all:\n 1. Set MqcHeads to the\n      one used in shell parachain\n 2. Change own parachain id\n      to the one used in shell parachain\n 3. Reset HighestSlotSeen in author-inherent\n 4. Swap slot leases with recovery parathread
+        else Otherwise
+            ADMIN -> PARA: Batch all:\n 1. Set MqcHeads to the\n      one used in shell parachain\n 2. Change own parachain id\n      to the one used in shell parachain\n 3. Swap slot leases with recovery parathread
+        end
+    else Otherwise
+        alt The parachain uses the author-inherent pallet from the Nimbus framework
+            ADMIN -> PARA: Batch all:\n 1. Reset HighestSlotSeen in author-inherent\n 2. Swap slot leases with recovery parathread
+        else Otherwise
+            ADMIN -> PARA: Swap slot leases with recovery parathread
+        end
+    end
+
     PARA -> RELAY: Swap slot leases with recovery parathread (XCM)
     RELAY -> PARA: Downgrade
     PARA -> PARAT **: Downgrade
